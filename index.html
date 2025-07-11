@@ -26,7 +26,7 @@
           var id = 1
           tabledata = [];
           parsed.forEach(element => {
-            tabledata.push({ id: id, username: element.username, password: element.password, isValid: element.isValid == 1 ? true : false, group: element.groupName })
+            tabledata.push({ id: id, username: element.username, password: element.password, userId: element.userId, isValid: element.isValid == 1 ? true : false, group: element.groupName })
             id++;
           });
         }
@@ -254,6 +254,7 @@
         columns: [ //Define Table Columns
           { title: "用户名", field: "username", formatter: convert2Copiable },
           { title: "密码", field: "password", formatter: convert2Copiable },
+          { title: "用户ID", field: "userId", formatter: convert2Copiable },
           { title: "是否有效", field: "isValid", formatter: "tickCross" },
           { title: "从属组", field: "group" },
           { formatter: reportIcon, width: 40, hozAlign: "center", cellClick: report },
@@ -262,7 +263,7 @@
         ],
       });
 
-      setTimeout(() => {
+      table.on("tableBuilt", () => {
 
         var items = document.querySelectorAll("span");
         items.forEach((el) => {
@@ -293,7 +294,7 @@
           });
 
         })
-      }, 1000)
+      })
 
       document.getElementById("reload").style.display = "none";
       document.body.style.overflow = "visible"
