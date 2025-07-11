@@ -1,0 +1,365 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://unpkg.com/tabulator-tables/dist/css/tabulator.min.css" rel="stylesheet">
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src=" https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js "></script>
+  <link href=" https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css "
+    rel="stylesheet">
+  <script>
+    var tabledata = [];
+    var table;
+    async function RefreshList() {
+      await fetch("https://downsicient-users-api.plfront.us.kg/getAllRecords", {
+        method: "GET",
+        mode: "cors"
+      }).then(async (response) => {
+        if (response.ok) {
+          var data = await response.text();
+          var parsed = JSON.parse(data);
+          var id = 1
+          tabledata = [];
+          parsed.forEach(element => {
+            tabledata.push({ id: id, username: element.username, password: element.password, isValid: element.isValid == 1 ? true : false, group: element.groupName })
+            id++;
+          });
+        }
+      })
+    }
+
+    function InputSearch() {
+      var input, filter;
+      input = document.getElementById("searchBox");
+      filter = input.value.toUpperCase();
+      table.setFilter("username", "keywords", filter);
+    }
+
+
+    async function RunOnload() {
+      await RefreshList();
+
+      var reportIcon = function (cell, formatterParams, onRendered) { //plain text value
+        return "<i class=\"fa-solid fa-flag-checkered\"></i>";
+      };
+
+      var changeIcon = function (cell, formatterParams, onRendered) { //plain text value
+        return "<i class=\"fa-solid fa-pen\"></i>";
+      };
+
+      var convert2Copiable = function (cell, formatterParams, onRendered) {
+        return "<span>" + cell.getValue() + "</span>"; //return the contents of the cell;
+      }
+
+      var report = function (e, cell) {
+        Swal.fire({
+          title: `报告问题`,
+          icon: "question",
+          text: `你确定 ${cell.getRow().getData().username} 的账号密码与现在状态不符吗？`,
+          inputAttributes: {
+            autocapitalize: "off"
+          },
+          showCancelButton: true,
+          confirmButtonText: "确认",
+          cancelButtonText: "取消",
+          showLoaderOnConfirm: true,
+          preConfirm: async () => {
+            try {
+
+              await fetch("https://downsicient-users-api.plfront.us.kg/updateRecord", {
+                method: "POST",
+                mode: "cors",
+                body: JSON.stringify({
+                  username: cell.getRow().getData().username
+                })
+              }).then(async (response) => {
+                if (response.ok) {
+                  return await response.json()
+                }
+                else {
+                  return Swal.showValidationMessage(`
+                    错误：${(await response.json()).msg}
+                  `);
+
+                }
+              })
+            } catch (error) {
+              Swal.showValidationMessage(`
+                错误：${error}
+              `);
+            }
+          },
+          allowOutsideClick: () => !Swal.isLoading()
+        }).then(async (result) => {
+          if (result.isConfirmed) {
+            Swal.fire({
+              icon: "success",
+              title: `问题已修改！`,
+            });
+            await RefreshList();
+            table.replaceData(tabledata);
+          }
+        });
+      }
+
+      var change = function (e, cell) {
+        Swal.fire({
+          title: '更改密码',
+          showCancelButton: true,
+          showLoaderOnConfirm: true,
+          html:
+            '<p>如果您确认您拥有 ' + cell.getRow().getData().username + ' 的正确密码，<br>请在下方输入：</p>' +
+            '<input id="passwordField" class="swal2-input">',
+          allowOutsideClick: () => !Swal.isLoading(),
+          preConfirm: async function () {
+            var password = $('#passwordField').val()
+            try {
+              await fetch("https://downsicient-users-api.plfront.us.kg/updateRecordPassword", {
+                method: "POST",
+                mode: "cors",
+                body: JSON.stringify({
+                  username: cell.getRow().getData().username,
+                  password: password
+                })
+              }).then(async (res) => {
+                if (res.ok) {
+                  Swal.fire({
+                    icon: "success",
+                    title: `问题已修改！`,
+                  });
+                  RefreshBtnBehavior();
+                }
+                else {
+                  Swal.showValidationMessage(`
+                    错误：${(await res.json()).msg}
+                  `)
+                }
+              })
+            }
+            catch (ex) {
+              Swal.showValidationMessage(`
+                错误：${ex}
+              `)
+            }
+
+          },
+          onOpen: function () {
+            $('#passwordField').focus()
+          }
+        })
+      }
+
+      table = new Tabulator("#userTable", {
+        data: tabledata, //assign data to table
+        layout: "fitColumns", //fit columns to width of table (optional)
+        columns: [ //Define Table Columns
+          { title: "用户名", field: "username", formatter: convert2Copiable },
+          { title: "密码", field: "password", formatter: convert2Copiable },
+          { title: "是否有效", field: "isValid", formatter: "tickCross" },
+          { title: "从属组", field: "group" },
+          { formatter: reportIcon, width: 40, hozAlign: "center", cellClick: report },
+          { formatter: changeIcon, width: 40, hozAlign: "center", cellClick: change },
+        ],
+      });
+
+      setTimeout(() => {
+
+        var items = document.querySelectorAll("span");
+        items.forEach((el) => {
+          el.onclick = function () {
+            document.execCommand("copy");
+            var Toast = Swal.mixin({
+              toast: true,
+              position: "top-end",
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+              didOpen: (toast) => {
+                toast.onmouseenter = Swal.stopTimer;
+                toast.onmouseleave = Swal.resumeTimer;
+              },
+            });
+            Toast.fire({
+              icon: "success",
+              title: "已复制！",
+            });
+          }
+
+          el.addEventListener("copy", function (event) {
+            event.preventDefault();
+            if (event.clipboardData) {
+              event.clipboardData.setData("text/plain", el.textContent);
+            }
+          });
+
+        })
+      }, 1000)
+
+      document.getElementById("reload").style.display = "none";
+      document.body.style.overflow = "visible"
+      InputSearch();
+    }
+
+
+    window.onload = RunOnload;
+
+    async function RefreshBtnBehavior() {
+      document.getElementById("reload").style.display = "flex";
+      document.body.style.overflow = "hidden"
+      await RefreshList();
+      table.replaceData(tabledata);
+      document.getElementById("reload").style.display = "none";
+      document.body.style.overflow = "visible"
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(-45deg, #ee7752, #e779a3, #23a6d5, #23d5ab);
+      background-size: 400% 1000%;
+      animation: gradient 15s ease infinite;
+      height: 100vh;
+      background-repeat: no-repeat;
+    }
+
+    @keyframes gradient {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    * {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+
+    #searchBox {
+      border-radius: 10px;
+      background-position: 10px 10px;
+      background-repeat: no-repeat;
+      width: 87%;
+      font-size: 16px;
+      padding: 12px 20px 12px 20px;
+      border: 1px solid #ddd;
+      margin-bottom: 12px;
+    }
+
+    #userTable {
+      border-radius: 10px;
+    }
+
+    #refreshBtn {
+      border-radius: 10px;
+      width: 10%;
+      font-size: 16px;
+      margin-left: 2%;
+      height: 45px;
+    }
+
+    span {
+      color: blue;
+      cursor: pointer;
+    }
+
+    #reload {
+      backdrop-filter: blur(3px) saturate(180%);
+      -webkit-backdrop-filter: blur(3px) saturate(180%);
+      background-color: rgba(17, 25, 40, 0.75);
+      width: 100%;
+      height: 105%;
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      margin: 0;
+      top: -10px;
+    }
+
+    #loadingIcon {
+      width: 100px;
+    }
+
+    #main {
+      margin: 10px;
+    }
+
+    :root {
+      --general-margin: 10px;
+      --topbar-blurness: 10px;
+    }
+
+    #title {
+      top: 0;
+      width: 100%;
+      height: 100px;
+
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(var(--topbar-blurness));
+      -webkit-backdrop-filter: blur(var(--topbar-blurness));
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      height: 100px;
+      margin: 0;
+    }
+
+    #title h1 {
+      margin: 20px;
+      font-size: 40px;
+      background-image: linear-gradient(to right, #0250c5 0%, #d43f8d 100%);
+      background-clip: text;
+      color: transparent;
+    }
+
+    #title img {
+      height: 70px;
+      margin: 10px;
+      animation: iconRotation 10s linear infinite;
+    }
+
+    @keyframes iconRotation {
+      0% {
+        rotate: 0deg;
+      }
+
+      100% {
+        rotate: 360deg;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="reload">
+    <img id="loadingIcon" src="./loading.gif">
+  </div>
+
+  <div id="title">
+    <img src="icon.png" />
+    <h1>唐氏练习题账号数据库</h1>
+  </div>
+
+  <div id="main">
+    <input type="text" id="searchBox" onkeyup="InputSearch()" placeholder="搜索用户">
+    <button id="refreshBtn" onclick="RefreshBtnBehavior()">刷新</button>
+
+    <div id="userTable"></div>
+  </div>
+
+</body>
+
+</html>
