@@ -52,6 +52,10 @@
         return "<i class=\"fa-solid fa-pen\"></i>";
       };
 
+      var infoIcon = function (cell, formatterParams, onRendered) { //plain text value
+        return "<i class=\"fa-solid fa-circle-info\"></i>";
+      };
+
       var convert2Copiable = function (cell, formatterParams, onRendered) {
         return "<span>" + cell.getValue() + "</span>"; //return the contents of the cell;
       }
@@ -154,6 +158,96 @@
         })
       }
 
+      var info = async function (e, cell) {
+        document.getElementById("reload").style.display = "flex";
+        document.body.style.overflow = "hidden"
+
+        if (cell.getRow().getData().group == "Student") {
+          var authRes = await fetch("https://cors.plfront.dpdns.org/?url=https://m.afficienta.cn/mathjoy/api/v1.0/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              browser: "Mozilla Firefox",
+              client_time: "2011-11-21T11:45:14+0800",
+              ip: "0.0.0.0",
+              username: cell.getRow().getData().username,
+              password: cell.getRow().getData().password
+            })
+          })
+          var authData = await authRes.json();
+
+          var classRes = await fetch("https://api3.afficienta.cn/datastore/getafterschoolclassbyschoolclassid", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              school_class_id: authData.school_class_id[0]
+            })
+          })
+          var classData = await classRes.json();
+
+
+          await fetch("https://cors.plfront.dpdns.org/?url=https://m.afficienta.cn/mathjoy/api/v1.0/getUserThisWeekAssignment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: authData._id
+            })
+          }).then(async (res) => {
+            var data = await res.json();
+            Swal.fire({
+              icon: "info",
+              title: cell.getRow().getData().username + " 的信息",
+              html: `
+              名称：${authData.firstname + " " + authData.lastname}<br>
+              密码：${authData.passtmp}<br>
+              当前真实年级：${authData.current_school_grade}<br>
+              当前进度：${data.points}%<br>
+              当前年级：${data.assignment_grade}<br>
+              班级：${classData.data.class_name}
+            `
+            })
+          })
+        }
+        else {
+          var authRes = await fetch("https://api3.afficienta.cn/datastore/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: cell.getRow().getData().username,
+              password: cell.getRow().getData().password
+            })
+          })
+          var authData = await authRes.json();
+          console.log(authData)
+
+          await fetch("https://api3.afficienta.cn/datastore/graphql", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "authorization": authData.data.token },
+            body: JSON.stringify({
+              operationName: "admin",
+              query: "query admin($_id: String!) {  admin(_id: $_id) {    id    username    firstname    lastname    role    expiration_date    learning_center_id    account_register_date    passtmp    current_school_grade    starting_school_grade    subscriptions {      product_id      user_id      actived      first_time_purchase_ts      expire_ts      trial_start      trial_end      start_ts      freeze_start      freeze_end      update_ts      updated_by      updated_by_source      subscription_term      pay_method      cancel_at_period_end      canceled_at      __typename    }    contact_phones {      number      area_code      type      __typename    }    contact_emails    address {      street      city      state      zip_code      country_region      __typename    }    user_learning_info {      user_id      start_grade      school_grade      stop_grade      current_grade      weekly_time      need_assignment      grade_setup {        grade        setSkillLevelToInit        initialSkillLevel        goalScore        initial10ProblemSetup        __typename      }      init_skill_status_flag      section_type      updated_by_source      updated_ts      updated_by      __typename    }    show_as_advisor    show_as_sales    __typename  }}",
+              variables: {
+                _id: authData.data.user_id
+              }
+            })
+          }).then(async (res) => {
+            var data = (await res.json()).data.admin;
+            Swal.fire({
+              icon: "info",
+              title: cell.getRow().getData().username + " 的信息",
+              html: `
+              名称：${data.firstname + " " + data.lastname}<br>
+              密码：${data.passtmp}<br>
+              电子邮箱：${data.contact_emails[0]}<br>
+            `
+            })
+          })
+
+        }
+        document.getElementById("reload").style.display = "none";
+        document.body.style.overflow = "visible"
+      }
+
       table = new Tabulator("#userTable", {
         data: tabledata, //assign data to table
         layout: "fitColumns", //fit columns to width of table (optional)
@@ -164,6 +258,7 @@
           { title: "从属组", field: "group" },
           { formatter: reportIcon, width: 40, hozAlign: "center", cellClick: report },
           { formatter: changeIcon, width: 40, hozAlign: "center", cellClick: change },
+          { formatter: infoIcon, width: 40, hozAlign: "center", cellClick: info },
         ],
       });
 
