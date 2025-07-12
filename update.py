@@ -10,7 +10,9 @@ def update_account(username):
         response = requests.post('https://downsicient-users-api.plfront.us.kg/updateRecord', 
                                data=json.dumps(payload), 
                                headers=headers)
-        return f"Updated {username}: {response.status_code}"
+        tableTxt = "\t\t"
+        if (len(str(payload)) > 25): tableTxt = "\t"
+        return str(response.status_code) + " | " + str(payload) + tableTxt + "|\t" + response.text
     except requests.RequestException as e:
         return f"Error updating {username}: {str(e)}"
 
