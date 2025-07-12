@@ -10,8 +10,7 @@
   <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
   <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.js"></script>
   <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.7.2/js/all.min.js"></script>
-  <link href="https://unpkg.com/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css "
-    rel="stylesheet">
+  <link href="https://unpkg.com/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css " rel="stylesheet">
   <script>
     var tabledata = [];
     var table;
@@ -26,13 +25,13 @@
           var id = 1
           tabledata = [];
           parsed.forEach(element => {
-            tabledata.push({ 
-              id: id, 
-              username: element.username, 
-              password: element.password, 
-              userId: element.userId, 
-              isValid: element.isValid == 1 ? true : false, 
-              group: element.groupName == "Teacher" ? "教师" : "学生", 
+            tabledata.push({
+              id: id,
+              username: element.username,
+              password: element.password,
+              userId: element.userId,
+              isValid: element.isValid == 1 ? true : false,
+              group: element.groupName == "Teacher" ? "教师" : "学生",
               lastUpdateTime: (new Date(element.lastUpdateTime)).toLocaleDateString() + " " + (new Date(element.lastUpdateTime)).toLocaleTimeString()
             })
             id++;
@@ -169,6 +168,7 @@
       var info = async function (e, cell) {
         document.getElementById("reload").style.display = "flex";
         document.body.style.overflow = "hidden"
+        document.getElementById("reload").style.top = `${window.scrollY}px`
 
         if (cell.getRow().getData().group == "学生") {
           var authRes = await fetch("https://cors.plfront.dpdns.org/?url=https://m.afficienta.cn/mathjoy/api/v1.0/auth", {
@@ -316,6 +316,7 @@
     async function RefreshBtnBehavior() {
       document.getElementById("reload").style.display = "flex";
       document.body.style.overflow = "hidden"
+      document.getElementById("reload").style.top = `${window.scrollY}px`
       await RefreshList();
       table.replaceData(tabledata);
       document.getElementById("reload").style.display = "none";
@@ -391,7 +392,6 @@
       align-items: center;
       z-index: 999;
       margin: 0;
-      top: -10px;
     }
 
     #loadingIcon {
