@@ -170,7 +170,7 @@
         document.getElementById("reload").style.display = "flex";
         document.body.style.overflow = "hidden"
 
-        if (cell.getRow().getData().group == "Student") {
+        if (cell.getRow().getData().group == "学生") {
           var authRes = await fetch("https://cors.plfront.dpdns.org/?url=https://m.afficienta.cn/mathjoy/api/v1.0/auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
