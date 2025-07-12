@@ -26,7 +26,15 @@
           var id = 1
           tabledata = [];
           parsed.forEach(element => {
-            tabledata.push({ id: id, username: element.username, password: element.password, userId: element.userId, isValid: element.isValid == 1 ? true : false, group: element.groupName })
+            tabledata.push({ 
+              id: id, 
+              username: element.username, 
+              password: element.password, 
+              userId: element.userId, 
+              isValid: element.isValid == 1 ? true : false, 
+              group: element.groupName == "Teacher" ? "教师" : "学生", 
+              lastUpdateTime: (new Date(element.lastUpdateTime)).toLocaleDateString() + " " + (new Date(element.lastUpdateTime)).toLocaleTimeString()
+            })
             id++;
           });
         }
@@ -255,8 +263,9 @@
           { title: "用户名", field: "username", formatter: convert2Copiable },
           { title: "密码", field: "password", formatter: convert2Copiable },
           { title: "用户ID", field: "userId", formatter: convert2Copiable },
-          { title: "是否有效", field: "isValid", formatter: "tickCross" },
           { title: "从属组", field: "group" },
+          { title: "最后更新时间", field: "lastUpdateTime" },
+          { title: "有效", field: "isValid", formatter: "tickCross", width: 60, hozAlign: "center" },
           { formatter: reportIcon, width: 40, hozAlign: "center", cellClick: report },
           { formatter: changeIcon, width: 40, hozAlign: "center", cellClick: change },
           { formatter: infoIcon, width: 40, hozAlign: "center", cellClick: info },
@@ -390,7 +399,7 @@
     }
 
     #main {
-      margin: 10px;
+      margin: 10px 30px 30px 30px;
     }
 
     :root {
